@@ -162,7 +162,7 @@ if __name__ == "__main__":
         dataset_dir="E:\dataset\CholecT50",
         output_dir="E:\dataset\CholecT50\data_phase",
         merge_train_test=True,
-        sampling_rate=0.1,
+        sampling_rate=0.01,
         save_by_video=True
     )
     generator.generate_all() 

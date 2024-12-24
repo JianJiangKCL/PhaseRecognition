@@ -85,7 +85,7 @@ def main():
                       help='JSON file containing phase labels (default: datasets/phase_choices.json)')
     
     # Required arguments
-    parser.add_argument('--input', default="E:\dataset\CholecT50\data_phase\sampling_0.1\VID06_phase.json",
+    parser.add_argument('--input', default="E:\dataset\CholecT50\data_phase\sampling_0.01\VID08_phase.json",
                       help='Input JSON file containing image paths and ground truth')
     
     # Optional arguments

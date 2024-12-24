@@ -43,7 +43,7 @@ class ImageAnalyzer:
         self.api = self._initialize_api()
         self.phase_labels = {}
         self.evaluator = None
-        self.formatter = ResponseFormatter.get_formatter(model_name)
+        self.formatter = None  # Initialize formatter to None, will be set when phase_labels are set
 
     def get_timestamp(self) -> str:
         """Get current timestamp in format suitable for filenames."""
@@ -77,6 +77,9 @@ class ImageAnalyzer:
         """Set the phase labels for recognition."""
         self.phase_labels = labels_dict
         self.evaluator = PhaseEvaluator(labels_dict)
+        # Create formatter with phase labels
+        formatter = ResponseFormatter(labels_dict)
+        self.formatter = formatter.get_formatter(self.model_name)
 
     def create_phase_prompt(self) -> str:
         """Create a formatted prompt with all phase options."""
@@ -102,14 +105,16 @@ class ImageAnalyzer:
             
             # Format the response if formatter is available
             if self.formatter:
-                formatted_response = self.formatter(raw_response)
-                if formatted_response:
+                try:
+                    # Call the appropriate format method directly
+                    formatted_response = self.formatter(raw_response)
                     return formatted_response
-                
-                # If formatting fails, log the raw response for debugging
-                print(f"\nWarning - Unformattable response (returning 'Z'): {raw_response}")
+                except Exception as e:
+                    # Log the error and raw response for debugging
+                    print(f"\nWarning - Unformattable response (returning 'Z'): {raw_response}")
+                    return 'Z'
             
-            # If no formatter or formatting failed, try basic letter extraction
+            # If no formatter, try basic letter extraction
             if raw_response:
                 # Look for single letters A-G
                 match = re.search(r'\b[A-G]\b', raw_response)
