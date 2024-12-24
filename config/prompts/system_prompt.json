@@ -1,0 +1,19 @@
+{
+    "base_prompt": "Please analyze this surgical image and select the most appropriate surgical phase.",
+    "instruction": "Choose EXACTLY ONE option from the following phases:",
+    "format_instruction": "Output format: Only return the letter (A/B/C/...) corresponding to your choice.",
+    "phase_descriptions": {
+        "A": "Preparation",
+        "B": "CalotTriangleDissection",
+        "C": "ClippingCutting",
+        "D": "GallbladderDissection",
+        "E": "GallbladderPackaging",
+        "F": "CleaningCoagulation",
+        "G": "GallbladderRetraction"
+    },
+    "error_messages": {
+        "invalid_response": "Invalid response format. Please provide a single letter A-G.",
+        "api_error": "Error processing with API: {error}",
+        "image_error": "Error processing image: {error}"
+    }
+} 

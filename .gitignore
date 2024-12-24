@@ -1,0 +1,27 @@
+# Python cache files
+*.pyc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# JSON files
+*.json
+
+# Environment and IDE files
+.env
+.venv
+env/
+venv/
+.idea/
+.vscode/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+
+# Force include specific config files
+!config/prompts/system_prompt.json 
