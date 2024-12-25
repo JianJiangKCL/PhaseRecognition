@@ -25,6 +25,7 @@ class ImageAnalyzer:
     def __init__(
         self,
         model_name: str,
+        strategy: str = 'current',
         resize: bool = False,
         max_size: int = 768
     ):
@@ -33,10 +34,12 @@ class ImageAnalyzer:
         
         Args:
             model_name (str): Name of the model to use ('openai', 'anthropic', 'google', 'xai')
+            strategy (str): Strategy to use for phase recognition ('current' or 'past-current')
             resize (bool): Whether to resize images before processing
             max_size (int): Maximum dimension for resized images
         """
         self.model_name = model_name.lower()
+        self.strategy = strategy
         self.resize = resize
         self.max_size = max_size if resize else None
         self.config = self._load_config()
@@ -44,6 +47,7 @@ class ImageAnalyzer:
         self.phase_labels = {}
         self.evaluator = None
         self.formatter = None  # Initialize formatter to None, will be set when phase_labels are set
+        self.previous_prediction = None  # Track previous frame prediction
 
     def get_timestamp(self) -> str:
         """Get current timestamp in format suitable for filenames."""
@@ -81,21 +85,33 @@ class ImageAnalyzer:
         formatter = ResponseFormatter(labels_dict)
         self.formatter = formatter.get_formatter(self.model_name)
 
-    def create_phase_prompt(self) -> str:
+    def create_phase_prompt(self, previous_phase: str = None) -> str:
         """Create a formatted prompt with all phase options."""
-        prompt = "Please analyze this surgical image and select the most appropriate surgical phase.\n\n"
-        prompt += "Choose EXACTLY ONE option from the following phases:\n\n"
+        # Load system prompt configuration
+        with open('config/prompts/system_prompt.json', 'r') as f:
+            system_prompt = json.load(f)
+        
+        if self.strategy == 'current':
+            prompt = system_prompt["base_prompt"] + "\n\n"
+        else:  # past-current strategy
+            if previous_phase:
+                phase_name = self.phase_labels.get(previous_phase, "Unknown")
+                prompt = f"{system_prompt['base_prompt']}, considering that the previous frame was in phase {previous_phase} ({phase_name}).\n\n"
+            else:
+                prompt = f"{system_prompt['base_prompt']} (no previous phase information available).\n\n"
+        
+        prompt += system_prompt["instruction"] + "\n\n"
         
         for key, description in self.phase_labels.items():
             prompt += f"{key}. {description}\n"
         
-        prompt += "\nOutput format: Only return the letter (A/B/C/...) corresponding to your choice."
+        prompt += "\n" + system_prompt["format_instruction"]
         return prompt
 
     def analyze_image(self, image_path: str, prompt: str = None) -> str:
         """Analyze a single image."""
         if prompt is None:
-            prompt = self.create_phase_prompt()
+            prompt = self.create_phase_prompt(self.previous_prediction)
 
         try:
             # Prepare image data
@@ -108,6 +124,8 @@ class ImageAnalyzer:
                 try:
                     # Call the appropriate format method directly
                     formatted_response = self.formatter(raw_response)
+                    # Update previous prediction for next frame
+                    self.previous_prediction = formatted_response
                     return formatted_response
                 except Exception as e:
                     # Log the error and raw response for debugging
@@ -119,12 +137,16 @@ class ImageAnalyzer:
                 # Look for single letters A-G
                 match = re.search(r'\b[A-G]\b', raw_response)
                 if match:
-                    return match.group(0)
+                    result = match.group(0)
+                    self.previous_prediction = result
+                    return result
                 
                 # Look for any letter followed by a dot or parenthesis
                 match = re.search(r'([A-G])[\.\)]', raw_response)
                 if match:
-                    return match.group(1)
+                    result = match.group(1)
+                    self.previous_prediction = result
+                    return result
             
             # Return 'Z' for any unhandled cases
             return 'Z'

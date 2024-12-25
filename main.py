@@ -78,36 +78,37 @@ def update_results_file(output_file: str, image_name: str, prediction: str, grou
         print(f"Error updating results file: {str(e)}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Surgical Phase Recognition System')
-    
-    # Add new argument for phase labels file
-    parser.add_argument('--phase-labels', default='datasets/phase_choices.json',
-                      help='JSON file containing phase labels (default: datasets/phase_choices.json)')
-    
-    # Required arguments
+    parser = argparse.ArgumentParser(description='Analyze surgical phases in images using AI models')
     parser.add_argument('--input', default="E:\dataset\CholecT50\data_phase\sampling_0.01\VID08_phase.json",
                       help='Input JSON file containing image paths and ground truth')
-    
-    # Optional arguments
-    parser.add_argument('--model', default='openai',
-                      choices=['openai', 'anthropic', 'google', 'xai'],
-                      help='AI model to use for analysis (default: openai)')
     parser.add_argument('--output-dir', default='results',
                       help='Output directory for results (default: results)')
-    parser.add_argument('--resize', action='store_true',
-                      help='Resize images before processing')
-    parser.add_argument('--max-size', type=int, default=768,
+    parser.add_argument('--labels-file', default='datasets/phase_choices.json', help='JSON file containing phase labels')
+    parser.add_argument('--ground-truth', help='JSON file containing ground truth labels for evaluation')
+    parser.add_argument('--sampling', type=int, default=1, help='Process every Nth frame (only for folder input)')
+    parser.add_argument('--model', default='openai', choices=['openai', 'anthropic', 'google', 'xai'],
+                      help='AI model to use for analysis')
+    parser.add_argument('--strategy', default='current', choices=['current', 'past-current'],
+                      help='Strategy to use for phase recognition')
+    parser.add_argument('--resize', action='store_true', help='Resize images before processing')
+    parser.add_argument('--max-size', type=int, default=768, 
                       help='Maximum dimension for image resize (default: 768)')
-    parser.add_argument('--batch-size', type=int, default=10,
-                      help='Number of images to process in parallel (default: 10)')
     
     args = parser.parse_args()
 
+    # Initialize the analyzer with specified model and resize options
+    analyzer = ImageAnalyzer(
+        model_name=args.model,
+        strategy=args.strategy,
+        resize=args.resize,
+        max_size=args.max_size
+    )
+
     # Load phase labels
     try:
-        with open(args.phase_labels, 'r') as f:
+        with open(args.labels_file, 'r') as f:
             phase_dict = json.load(f)
-        print(f"Loaded phase labels from {args.phase_labels}")
+        print(f"Loaded phase labels from {args.labels_file}")
     except Exception as e:
         print(f"Error loading phase labels: {str(e)}")
         return
@@ -121,11 +122,6 @@ def main():
         return
 
     # Initialize analyzer and set phase labels
-    analyzer = ImageAnalyzer(
-        model_name=args.model,
-        resize=args.resize,
-        max_size=args.max_size
-    )
     analyzer.set_phase_labels(phase_dict)
 
     # Create output directory
